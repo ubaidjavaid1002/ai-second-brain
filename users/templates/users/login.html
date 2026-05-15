@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="flex items-center justify-center min-h-[80vh]">
+    <div class="w-full max-w-md bg-slate-800 p-8 rounded-xl shadow-lg">
+        <h2 class="text-3xl font-bold mb-6 text-center">
+            Login
+        </h2>
+        <form method="POST" class="space-y-5">
+            {% csrf_token %}
+            <div>
+                <label class="block mb-2">
+                    Username
+                </label>
+                {{ form.username }}
+            </div>
+            <div>
+                <label class="block mb-2">
+                    Password
+                </label>
+                {{ form.password }}
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold">
+                Login
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

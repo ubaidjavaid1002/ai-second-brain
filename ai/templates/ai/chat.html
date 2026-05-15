@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="flex justify-center items-center min-h-[85vh]">
+    <div class="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl flex flex-col h-[85vh]">
+        <!-- Header -->
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-3xl font-bold">
+                AI Workspace
+            </h1>
+            <p class="text-slate-400 mt-2">
+                Session-based AI chat
+            </p>
+        </div>
+        <!-- Chat Messages -->
+        <div
+            id="chat-box"
+            class="flex-1 overflow-y-auto p-6 space-y-6"
+        >
+
+            {% for chat in chat_history %}
+
+                <div class="flex justify-end">
+
+                    <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
+                        {{ chat.user }}
+                    </div>
+
+                </div>
+
+                <div class="flex justify-start">
+
+                    <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
+                        {{ chat.ai }}
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+        <!-- Input -->
+
+        <div class="p-6 border-t border-slate-700">
+
+            <form
+                id="chat-form"
+                class="flex gap-4"
+            >
+
+                {% csrf_token %}
+
+                <input
+                    id="message-input"
+                    type="text"
+                    placeholder="Ask anything..."
+                    class="flex-1 p-4 rounded-xl bg-slate-700 text-white border border-slate-600 outline-none"
+                    required
+                >
+
+                <button
+                    type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 px-6 rounded-xl font-semibold"
+                >
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+
+const form = document.getElementById('chat-form');
+const input = document.getElementById('message-input');
+const chatBox = document.getElementById('chat-box');
+
+form.addEventListener('submit', async (e) => {
+
+    e.preventDefault();
+
+    const message = input.value;
+
+    if (!message.trim()) return;
+
+    // User Message
+
+    chatBox.innerHTML += `
+        <div class="flex justify-end">
+            <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
+                ${message}
+            </div>
+        </div>
+    `;
+
+    input.value = '';
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+    
+    // Loading Message
+
+    const loadingId = 'loading-message';
+
+    chatBox.innerHTML += `
+        <div
+            id="${loadingId}"
+            class="flex justify-start"
+        >
+            <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl animate-pulse">
+                AI is thinking...
+            </div>
+        </div>
+    `;
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Send Request
+
+    const response = await fetch('/chat/send/', {
+
+        method: 'POST',
+
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+
+        body: new URLSearchParams({
+            message: message
+        })
+
+    });
+    document.getElementById(loadingId).remove();
+    const data = await response.json();
+
+    // AI Response
+
+    chatBox.innerHTML += `
+        <div class="flex justify-start">
+            <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
+                ${data.ai}
+            </div>
+        </div>
+    `;
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+});
+
+</script>
+
+{% endblock %}

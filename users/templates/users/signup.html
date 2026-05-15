@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- signup.html -->
+
+<div class="flex items-center justify-center min-h-[80vh]">
+    <div class="w-full max-w-md bg-slate-800 p-8 rounded-xl shadow-lg">
+        <h2 class="text-3xl font-bold mb-6 text-center">
+        Create Account
+        </h2>
+
+        <form method="POST" class="space-y-5">
+            {% if form.errors %}
+            <div class="bg-red-500 text-white p-4 rounded mb-4">
+
+                {{ form.errors }}
+            </div>
+            {% endif %}
+
+            {% csrf_token %}
+            <div>
+                <label class="block mb-2 text-sm font-medium">
+                    Username
+                </label>
+
+                {{ form.username }}
+            </div>
+            <div>
+                <label class="block mb-2 text-sm font-medium">
+                    Password
+                </label>
+
+                {{ form.password1 }}
+            </div>
+            <div>
+                <label class="block mb-2 text-sm font-medium">
+                    Confirm Password
+                </label>
+                {{ form.password2 }}
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold">
+                Signup
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="flex items-center justify-center min-h-[80vh]">
+    <div class="w-full max-w-4xl bg-slate-800 rounded-2xl p-8 shadow-xl">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-bold">
+                    AI Second Brain
+                </h1>
+
+                <p class="text-slate-400 mt-2">
+                    Welcome back, {{ request.user.username }}
+                </p>
+            </div>
+            <a
+                href="/chat/"
+                class="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-lg font-semibold"
+            >
+                Open AI Chat
+            </a>
+        </div>
+        <div class="grid grid-cols-3 gap-6">
+            <div class="bg-slate-700 p-6 rounded-xl">
+                <h2 class="text-xl font-semibold mb-2">
+                    Chats
+                </h2>
+                <p class="text-slate-300">
+                    Your AI conversations
+                </p>
+            </div>
+            <div class="bg-slate-700 p-6 rounded-xl">
+                <h2 class="text-xl font-semibold mb-2">
+                    Notes
+                </h2>
+                <p class="text-slate-300">
+                    Smart saved notes
+                </p>
+            </div>
+            <div class="bg-slate-700 p-6 rounded-xl">
+                <h2 class="text-xl font-semibold mb-2">
+                    AI Tasks
+                </h2>
+                <p class="text-slate-300">
+                    AI assisted workflows
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
