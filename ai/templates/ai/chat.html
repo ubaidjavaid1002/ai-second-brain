@@ -2,153 +2,246 @@
 
 {% block content %}
 
-<div class="flex justify-center items-center min-h-[85vh]">
-    <div class="w-full max-w-5xl bg-slate-800 rounded-2xl shadow-xl flex flex-col h-[85vh]">
-        <!-- Header -->
-        <div class="p-6 border-b border-slate-700">
-            <h1 class="text-3xl font-bold">
-                AI Workspace
-            </h1>
-            <p class="text-slate-400 mt-2">
-                Session-based AI chat
-            </p>
+<div class="flex h-[85vh] bg-slate-800 rounded-2xl overflow-hidden">
+
+    <!-- Sidebar -->
+
+    <div class="w-80 bg-slate-900 border-r border-slate-700 flex flex-col">
+        <div class="p-4 border-b border-slate-700">
+            <a
+                href="/chat/new/"
+                class="block w-full bg-blue-600 hover:bg-blue-700 text-center py-3 rounded-xl font-semibold"
+            >
+                + New Chat
+            </a>
         </div>
-        <!-- Chat Messages -->
-        <div
-            id="chat-box"
-            class="flex-1 overflow-y-auto p-6 space-y-6"
-        >
 
-            {% for chat in chat_history %}
+        <div class="flex-1 overflow-y-auto p-4 space-y-3">
 
-                <div class="flex justify-end">
+            {% for conversation in conversations %}
 
-                    <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
-                        {{ chat.user }}
+                <div class="bg-slate-800 rounded-xl p-3">
+
+                    <a
+                        href="/chat/{{ conversation.id }}/"
+                        class="block font-medium truncate"
+                    >
+                        <span id="conversation-title-{{ conversation.id }}">
+                            {{ conversation.title }}
+                        </span>
+                    </a>
+
+                    <div class="mt-2">
+                        <a
+                            href="/chat/{{ conversation.id }}/delete/"
+                            class="text-red-400 text-sm"
+                        >
+                            Delete
+                        </a>
                     </div>
-
-                </div>
-
-                <div class="flex justify-start">
-
-                    <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
-                        {{ chat.ai }}
-                    </div>
-
                 </div>
 
             {% endfor %}
 
         </div>
 
-        <!-- Input -->
+    </div>
 
-        <div class="p-6 border-t border-slate-700">
+    <!-- Main Chat -->
 
-            <form
-                id="chat-form"
-                class="flex gap-4"
+    <div class="flex-1 flex flex-col">
+
+        {% if active_conversation %}
+
+            <div
+                id="chat-box"
+                class="flex-1 overflow-y-auto p-6 space-y-6"
             >
 
-                {% csrf_token %}
+                {% for message in messages %}
 
-                <input
-                    id="message-input"
-                    type="text"
-                    placeholder="Ask anything..."
-                    class="flex-1 p-4 rounded-xl bg-slate-700 text-white border border-slate-600 outline-none"
-                    required
+                    <div class="flex justify-end">
+
+                        <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
+                            {{ message.user_message }}
+                        </div>
+
+                    </div>
+
+                    <div class="flex justify-start">
+
+                        <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
+                            {{ message.ai_response }}
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+            <div class="p-6 border-t border-slate-700">
+
+                <form
+                    id="chat-form"
+                    class="flex gap-4"
+                    onsubmit="return false;"
                 >
 
-                <button
-                    type="submit"
-                    class="bg-blue-600 hover:bg-blue-700 px-6 rounded-xl font-semibold"
-                >
-                    Send
-                </button>
-            </form>
-        </div>
+                    {% csrf_token %}
+                    <input
+                        type="hidden"
+                        id="conversation-id"
+                        value="{{ active_conversation.id }}"
+                    >
+                    <input
+                        id="message-input"
+                        type="text"
+                        placeholder="Ask anything..."
+                        class="flex-1 p-4 rounded-xl bg-slate-700 text-white border border-slate-600 outline-none"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 px-6 rounded-xl font-semibold"
+                    >
+                        Send
+                    </button>
+
+                </form>
+
+            </div>
+
+        {% else %}
+
+            <div class="flex-1 flex items-center justify-center">
+
+                <div class="text-center">
+
+                    <h1 class="text-4xl font-bold mb-4">
+                        AI Second Brain
+                    </h1>
+
+                    <p class="text-slate-400 mb-6">
+                        Start a new conversation
+                    </p>
+
+                    <a
+                        href="/chat/new/"
+                        class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold"
+                    >
+                        Create Chat
+                    </a>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
     </div>
+
 </div>
 
 <script>
 
-const form = document.getElementById('chat-form');
-const input = document.getElementById('message-input');
-const chatBox = document.getElementById('chat-box');
+document.addEventListener('DOMContentLoaded', () => {
 
-form.addEventListener('submit', async (e) => {
-
-    e.preventDefault();
-
-    const message = input.value;
-
-    if (!message.trim()) return;
-
-    // User Message
-
-    chatBox.innerHTML += `
-        <div class="flex justify-end">
-            <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
-                ${message}
-            </div>
-        </div>
-    `;
-
-    input.value = '';
-
-    chatBox.scrollTop = chatBox.scrollHeight;
+    const form = document.getElementById('chat-form');
     
-    // Loading Message
+    if (!form) return;
+    
+    const input = document.getElementById('message-input');
+    const chatBox = document.getElementById('chat-box');
 
-    const loadingId = 'loading-message';
+    form.addEventListener('submit', async (e) => {
 
-    chatBox.innerHTML += `
-        <div
-            id="${loadingId}"
-            class="flex justify-start"
-        >
-            <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl animate-pulse">
-                AI is thinking...
+        e.preventDefault();
+
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        // User Message
+
+        chatBox.innerHTML += `
+            <div class="flex justify-end">
+                <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
+                    ${message}
+                </div>
             </div>
-        </div>
-    `;
+        `;
 
-    chatBox.scrollTop = chatBox.scrollHeight;
+        input.value = '';
 
-    // Send Request
+        chatBox.scrollTop = chatBox.scrollHeight;
+        
+        // Loading Message
 
-    const response = await fetch('/chat/send/', {
+        const loadingId = 'loading-message';
 
-        method: 'POST',
+        chatBox.innerHTML += `
+            <div
+                id="${loadingId}"
+                class="flex justify-start"
+            >
+                <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl animate-pulse">
+                    AI is thinking...
+                </div>
+            </div>
+        `;
 
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        chatBox.scrollTop = chatBox.scrollHeight;
 
-        body: new URLSearchParams({
-            message: message
-        })
+        // Send Request
+        const response = await fetch('/chat/send/', {
+
+            method: 'POST',
+
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+
+            body: new URLSearchParams({
+                message: message,
+                conversation_id: document.getElementById('conversation-id').value
+            })
+
+        });
+        if (!response.ok) {
+            alert('Something went wrong');
+            return;
+        }
+        document.getElementById(loadingId).remove();
+        chatBox.scrollTop = chatBox.scrollHeight;
+        const data = await response.json();
+
+        //update the chat title
+        const titleElement = document.getElementById(
+            `conversation-title-${data.conversation_id}`
+        );
+
+        if (titleElement) {
+
+            titleElement.textContent = data.title;
+        }
+        // AI Response
+
+        chatBox.innerHTML += `
+            <div class="flex justify-start">
+                <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
+                    ${data.ai}
+                </div>
+            </div>
+        `;
+
+        chatBox.scrollTop = chatBox.scrollHeight;
 
     });
-    document.getElementById(loadingId).remove();
-    const data = await response.json();
-
-    // AI Response
-
-    chatBox.innerHTML += `
-        <div class="flex justify-start">
-            <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
-                ${data.ai}
-            </div>
-        </div>
-    `;
-
-    chatBox.scrollTop = chatBox.scrollHeight;
 
 });
-
 </script>
 
 {% endblock %}
