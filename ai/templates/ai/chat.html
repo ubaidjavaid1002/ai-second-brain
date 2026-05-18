@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
+<input
+    type="hidden"
+    id="csrf-token"
+    value="{{ csrf_token }}"
+>
 <div class="flex h-[85vh] bg-slate-800 rounded-2xl overflow-hidden">
 
     <!-- Sidebar -->
@@ -26,12 +30,19 @@
                         href="/chat/{{ conversation.id }}/"
                         class="block font-medium truncate"
                     >
-                        <span id="conversation-title-{{ conversation.id }}">
+                        <span class="conversation-title" id="conversation-title-{{ conversation.id }}">
                             {{ conversation.title }}
                         </span>
                     </a>
-
+                    
                     <div class="mt-2">
+                        <button
+                            class="rename-btn text-gray-400 hover:text-white ml-2"
+                            data-id="{{ conversation.id }}"
+                            data-title="{{ conversation.title }}"
+                        >
+                            Rename✏
+                        </button>
                         <a
                             href="/chat/{{ conversation.id }}/delete/"
                             class="text-red-400 text-sm"
@@ -57,26 +68,60 @@
                 id="chat-box"
                 class="flex-1 overflow-y-auto p-6 space-y-6"
             >
+                {% if messages %}
 
-                {% for message in messages %}
+                    {% for message in messages %}
 
-                    <div class="flex justify-end">
+                        <div class="flex justify-end">
 
-                        <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
-                            {{ message.user_message }}
+                            <div class="bg-blue-600 p-4 rounded-2xl max-w-2xl">
+                                {{ message.user_message }}
+                            </div>
+
                         </div>
 
-                    </div>
+                        <div class="flex justify-start">
 
-                    <div class="flex justify-start">
+                            <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
+                                {{ message.ai_response }}
+                            </div>
 
-                        <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
-                            {{ message.ai_response }}
                         </div>
 
-                    </div>
+                    {% endfor %}
+                {% else %}
+                        <div id="empty-state"
+                        class="flex flex-col items-center justify-center h-full text-center px-6">
 
-                {% endfor %}
+                        <h1 class="text-4xl font-bold text-white mb-4">
+                            AI Second Brain
+                        </h1>
+
+                        <p class="text-gray-400 max-w-xl mb-8">
+                            Your personal AI workspace for ideas, coding, notes and productivity.
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+
+                            <button class="prompt-btn bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition">
+                                💡 Explain Django authentication flow
+                            </button>
+
+                            <button class="prompt-btn bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition">
+                                🐍 Help me optimize Python code
+                            </button>
+
+                            <button class="prompt-btn bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition">
+                                📄 Summarize my meeting notes
+                            </button>
+
+                            <button class="prompt-btn bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition">
+                                🚀 Suggest AI SaaS project ideas
+                            </button>
+
+                        </div>
+                    </div>
+                {% endif %}
 
             </div>
 
@@ -143,7 +188,39 @@
     </div>
 
 </div>
+<div id="rename-modal"
+     class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
 
+    <div class="bg-zinc-900 p-6 rounded-2xl w-full max-w-md">
+
+        <h2 class="text-xl font-semibold text-white mb-4">
+            Rename Conversation
+        </h2>
+
+        <input
+            type="text"
+            id="rename-input"
+            class="w-full bg-zinc-800 text-white p-3 rounded-xl outline-none mb-4"
+            placeholder="Enter new title"
+        >
+
+        <div class="flex justify-end gap-3">
+
+            <button
+                id="cancel-rename"
+                class="px-4 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600">
+                Cancel
+            </button>
+
+            <button
+                id="save-rename"
+                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500">
+                Save
+            </button>
+
+        </div>
+    </div>
+</div>
 <script>
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -154,6 +231,32 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const input = document.getElementById('message-input');
     const chatBox = document.getElementById('chat-box');
+    const messageInput = document.getElementById("message-input");
+    
+    //streaming response for better visuals
+    function streamText(element, text, speed = 15) {
+        let index = 0;
+
+        function type() {
+            if (index < text.length) {
+                element.innerHTML += text.charAt(index);
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                index++;
+                setTimeout(type, speed);
+            }
+        }
+
+        type();
+    }
+
+    document.querySelectorAll(".prompt-btn").forEach(button => {
+        button.addEventListener("click", () => {
+            messageInput.value = button.innerText.trim();
+            messageInput.focus();
+        });
+    });
 
     form.addEventListener('submit', async (e) => {
 
@@ -162,6 +265,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const message = input.value.trim();
 
         if (!message) return;
+
+        const emptyState = document.getElementById("empty-state");
+        if (emptyState) {
+            emptyState.style.display = "none";
+        }
 
         // User Message
 
@@ -228,19 +336,93 @@ document.addEventListener('DOMContentLoaded', () => {
             titleElement.textContent = data.title;
         }
         // AI Response
+        // below commented code is for displaying AI response at once
+        // chatBox.innerHTML += `
+        //     <div class="flex justify-start">
+        //         <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
+        //             ${data.ai}
+        //         </div>
+        //     </div>
+        // `;
 
+        //for streaming response
         chatBox.innerHTML += `
             <div class="flex justify-start">
-                <div class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
-                    ${data.ai}
+                <div id="streaming-message"
+                    class="bg-slate-700 p-4 rounded-2xl max-w-2xl whitespace-pre-wrap">
                 </div>
             </div>
         `;
+
+        const streamingMessage = document.getElementById("streaming-message");
+
+        streamText(streamingMessage, data.ai);
 
         chatBox.scrollTop = chatBox.scrollHeight;
 
     });
 
+});
+document.querySelectorAll(".rename-btn").forEach(button => {
+
+    button.addEventListener("click", async () => {
+
+        const conversationId = button.dataset.id;
+        const currentTitle = button.dataset.title;
+
+        const modal = document.getElementById("rename-modal");
+
+        const renameInput = document.getElementById("rename-input");
+
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+
+        renameInput.value = currentTitle;
+
+        document.getElementById("cancel-rename")
+        .onclick = () => {
+
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        document.getElementById("save-rename")
+        .onclick = async () => {
+
+            const newTitle = renameInput.value.trim();
+
+            if (!newTitle) return;
+            
+            const response = await fetch(
+                `/chat/rename/${conversationId}/`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": document.getElementById("csrf-token").value,
+                    },
+
+                    body: JSON.stringify({
+                        title: newTitle
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+
+                const titleElement = button.parentElement.parentElement.querySelector(".conversation-title");
+
+                if (titleElement) {
+                    titleElement.innerText = data.title;
+                }
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+            }
+        };    
+    });
 });
 </script>
 

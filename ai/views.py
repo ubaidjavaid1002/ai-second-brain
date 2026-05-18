@@ -1,4 +1,4 @@
-import requests
+import requests, json
 
 from django.http import JsonResponse
 from django.shortcuts import (
@@ -73,7 +73,7 @@ def chat_api(request):
             response = requests.post(
                 'http://localhost:11434/api/generate',
                 json={
-                    'model': 'llama3',
+                    'model': 'phi3',
                     'prompt': user_message,
                     'stream': False
                 }
@@ -123,3 +123,30 @@ def delete_chat(request, conversation_id):
     conversation.delete()
 
     return redirect('chat')
+
+@login_required
+def rename_conversation(request, conversation_id):
+
+    if request.method == "POST":
+
+        conversation = Conversation.objects.get(
+            id=conversation_id,
+            user=request.user
+        )
+
+        data = json.loads(request.body)
+
+        new_title = data.get("title")
+
+        if new_title:
+            conversation.title = new_title
+            conversation.save()
+
+            return JsonResponse({
+                "success": True,
+                "title": new_title
+            })
+
+    return JsonResponse({
+        "success": False
+    })

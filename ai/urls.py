@@ -4,7 +4,8 @@ from .views import (
     chat_page,
     chat_api,
     new_chat,
-    delete_chat
+    delete_chat,
+    rename_conversation,
 )
 
 urlpatterns = [
@@ -24,5 +25,10 @@ urlpatterns = [
         '<int:conversation_id>/delete/',
         delete_chat,
         name='delete_chat'
+    ),
+    path(
+        "rename/<int:conversation_id>/",
+        rename_conversation,
+        name="rename_conversation",
     ),
 ]
